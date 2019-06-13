@@ -24,14 +24,12 @@ import com.google.firebase.ml.naturallanguage.translate.FirebaseTranslatorOption
 import com.google.firebase.ml.vision.FirebaseVision;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
 import com.google.firebase.ml.vision.document.FirebaseVisionCloudDocumentRecognizerOptions;
-import com.google.firebase.ml.vision.text.FirebaseVisionCloudTextRecognizerOptions;
-import com.google.firebase.ml.vision.text.FirebaseVisionText;
-import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
+import com.google.firebase.ml.vision.document.FirebaseVisionDocumentText;
+import com.google.firebase.ml.vision.document.FirebaseVisionDocumentTextRecognizer;
 import com.google.firebase.ml.vision.text.RecognizedLanguage;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -44,7 +42,7 @@ public class Translate extends AppCompatActivity {
     ArrayList<String> k_lang=new ArrayList<>();
     ArrayList<String> v_lang=new ArrayList<>();
 
-    TextView action, text, dlang, slang, dresult, result, uslang;
+    TextView action, text, dlang, slang, dresult, result, uslang, tresult;
     ProgressBar pbar;
     Button translate;
     Spinner tlang, ulang;
@@ -61,6 +59,7 @@ public class Translate extends AppCompatActivity {
         result=findViewById(R.id.result);
         text=findViewById(R.id.text);
         dresult=findViewById(R.id.dresult);
+        tresult=findViewById(R.id.tresult);
         uslang=findViewById(R.id.uslang);
 
         pbar=findViewById(R.id.progressBar2);
@@ -94,6 +93,7 @@ public class Translate extends AppCompatActivity {
     }
 
     private void translateText() {
+        Toast.makeText(this, "Translating!\nPlease Wait...", Toast.LENGTH_SHORT).show();
 
         String scode=k_lang.get(v_lang.indexOf(ulang.getSelectedItem().toString()));
         String tcode=k_lang.get(v_lang.indexOf(tlang.getSelectedItem().toString()));
@@ -111,14 +111,14 @@ public class Translate extends AppCompatActivity {
                         @Override
                         public void onSuccess(Void aVoid) {
 
-                            translator.translate(data.toString())
-                                    .addOnSuccessListener(
-                                            new OnSuccessListener<String>() {
+                            translator.translate(data.toString()).addOnSuccessListener(new OnSuccessListener<String>() {
                                                 @Override
                                                 public void onSuccess(@NonNull String translatedText) {
+                                                    Toast.makeText(Translate.this, "Translation Successful!!", Toast.LENGTH_SHORT).show();
                                                     result.setText(translatedText);
                                                     result.setTextSize(16);
                                                     result.setVisibility(View.VISIBLE);
+                                                    tresult.setVisibility(View.VISIBLE);
                                                 }
                                             })
                                     .addOnFailureListener(
@@ -137,19 +137,20 @@ public class Translate extends AppCompatActivity {
 
     }
 
-    private void processText(FirebaseVisionText result) {
+    private void processText(FirebaseVisionDocumentText result) {
         List<String> rLang_codes = new ArrayList<>();
-        for (FirebaseVisionText.TextBlock block : result.getTextBlocks()) {
-            List<RecognizedLanguage> languages = block.getRecognizedLanguages();
+        for (FirebaseVisionDocumentText.Block block : result.getBlocks()) {
             data.append(block.getText().trim() + " ");
-            for (FirebaseVisionText.Line line : block.getLines()) {
-                for (FirebaseVisionText.Element element : line.getElements()) {
+            for (FirebaseVisionDocumentText.Paragraph paragraph : block.getParagraphs()){
+                for(FirebaseVisionDocumentText.Word word : paragraph.getWords()){
+                    List<RecognizedLanguage> languages = word.getRecognizedLanguages();
+                    for (RecognizedLanguage language : languages) {
+                        if (!rLang_codes.contains(language.getLanguageCode()))
+                            rLang_codes.add(language.getLanguageCode());
+                    }
                 }
             }
-            for (RecognizedLanguage language : languages) {
-                if (!rLang_codes.contains(language.getLanguageCode()))
-                    rLang_codes.add(language.getLanguageCode());
-            }
+
         }
 
         ArrayList<String> rdlang=new ArrayList<>();
@@ -194,22 +195,22 @@ public class Translate extends AppCompatActivity {
                         .setLanguageHints(Arrays.asList("en", "hi", "bn", "gu", "ne", "mr", "pa", "ta", "te"))
                         .build();
 
-        FirebaseVisionTextRecognizer detector = FirebaseVision.getInstance().getCloudTextRecognizer();
-        Task<FirebaseVisionText> result = detector.processImage(getImage());
-        result.addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
-            @Override
-            public void onSuccess(FirebaseVisionText firebaseVisionText) {
-                pbar.setVisibility(View.GONE);
-                processText(firebaseVisionText);
-            }
-        });
-        result.addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception e) {
-                Toast.makeText(Translate.this, "Failed to recognize text in image!!", Toast.LENGTH_LONG).show();
-                startActivity(new Intent(Translate.this, MainActivity.class));
-            }
-        });
+        FirebaseVisionDocumentTextRecognizer detector = FirebaseVision.getInstance().getCloudDocumentTextRecognizer(options);
+        detector.processImage(getImage())
+                .addOnSuccessListener(new OnSuccessListener<FirebaseVisionDocumentText>() {
+                    @Override
+                    public void onSuccess(FirebaseVisionDocumentText firebaseVisionDocumentText) {
+                        pbar.setVisibility(View.GONE);
+                        processText(firebaseVisionDocumentText);
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Toast.makeText(Translate.this, "Failed to recognize text in image!!", Toast.LENGTH_LONG).show();
+                        startActivity(new Intent(Translate.this, MainActivity.class));
+                    }
+                });
     }
 
     private void createCodes(){

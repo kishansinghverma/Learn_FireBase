@@ -22,6 +22,7 @@
                 android:layout_marginTop="10dp"
                 android:gravity="center"
                 android:text="Recognizing Text In Image"
+                android:textColor="#000000"
                 android:textSize="28sp" />
 
             <TextView
@@ -48,6 +49,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:gravity="center"
+                android:textColor="#000000"
                 android:text="Detected Languages In Text"
                 android:textSize="28sp"
                 android:visibility="gone" />
@@ -71,6 +73,7 @@
                 android:layout_marginRight="20dp"
                 android:gravity="center"
                 android:text="Select Source Language"
+                android:textColor="#000000"
                 android:textSize="28sp"
                 android:visibility="gone" />
 
@@ -92,6 +95,7 @@
                 android:layout_marginRight="20dp"
                 android:gravity="center"
                 android:text="Select Target Language"
+                android:textColor="#000000"
                 android:textSize="28sp"
                 android:visibility="gone" />
 
@@ -115,12 +119,26 @@
                 android:visibility="gone" />
 
             <TextView
+                android:id="@+id/tresult"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="20dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginRight="20dp"
+                android:gravity="center"
+                android:text="Translated Text"
+                android:textColor="#000000"
+                android:textSize="28sp"
+                android:visibility="gone" />
+
+            <TextView
                 android:id="@+id/result"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="20dp"
                 android:layout_marginTop="20dp"
                 android:layout_marginRight="20dp"
+                android:layout_marginBottom="10dp"
                 android:gravity="center"
                 android:text="Result"
                 android:textSize="24sp"
