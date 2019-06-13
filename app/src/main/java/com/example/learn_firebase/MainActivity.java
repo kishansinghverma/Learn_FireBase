@@ -1,78 +1,122 @@
 package com.example.learn_firebase;
 
-import android.support.annotation.NonNull;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.support.annotation.Nullable;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ProgressBar;
+import android.widget.ImageView;
 import android.widget.Toast;
 
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.FirebaseApp;
-import com.google.firebase.FirebaseNetworkException;
-import com.google.firebase.auth.AuthResult;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseAuthUserCollisionException;
-import com.google.firebase.auth.FirebaseAuthWeakPasswordException;
+import java.io.File;
+import java.io.IOException;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity{
 
-    private FirebaseAuth mAuth;
-    private Button login;
-    private EditText usr, pass;
+    ImageView imageHolder;
+    private final int requestCode = 20;
+    String currentPhotoPath;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mAuth = FirebaseAuth.getInstance();
 
-        login=findViewById(R.id.button);
-        usr=findViewById(R.id.editText);
-        pass=findViewById(R.id.editText2);
+        imageHolder = findViewById(R.id.imageView);
 
-
-        login.setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String user=usr.getText().toString().trim();
-                String pwd=pass.getText().toString().trim();
-
-                if(TextUtils.isEmpty(user) || TextUtils.isEmpty(pwd))
-                    Toast.makeText(MainActivity.this, "Fill All Fields!!", Toast.LENGTH_SHORT).show();
-                else
-                    register(user, pwd);
+                dispatchTakePictureIntent();
             }
         });
 
+        findViewById(R.id.re).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                File file=new File(currentPhotoPath);
+                file.delete();
+                dispatchTakePictureIntent();
+            }
+        });
+
+        findViewById(R.id.go).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent=new Intent(MainActivity.this, Translate.class);
+                intent.putExtra("path", currentPhotoPath);
+                startActivity(intent);
+            }
+        });
 
     }
 
-    public void register(String user, String pwd) {
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if(this.requestCode == requestCode && resultCode == RESULT_OK){
+            setPic();
+            findViewById(R.id.re).setVisibility(View.VISIBLE);
+            findViewById(R.id.go).setVisibility(View.VISIBLE);
+            findViewById(R.id.msg).setVisibility(View.VISIBLE);
+            findViewById(R.id.button).setVisibility(View.GONE);
+        }
+    }
 
+    private void dispatchTakePictureIntent() {
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+            File photoFile = null;
+            try {
+                photoFile = createImageFile();
+            }
+            catch (IOException ex) {
+            }
+            if (photoFile != null) {
+                Uri photoURI = FileProvider.getUriForFile(this, "com.example.learn_firebase", photoFile);
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                startActivityForResult(takePictureIntent, requestCode);
+            }
+        }
+    }
 
-        mAuth.createUserWithEmailAndPassword(user, pwd)
-                .addOnCompleteListener(new OnCompleteListener<AuthResult>() {
-                    @Override
-                    public void onComplete(@NonNull Task<AuthResult> task) {
-                        if(task.isSuccessful())
-                            Toast.makeText(MainActivity.this, "Registered Successfully!!", Toast.LENGTH_SHORT).show();
-                        else
-                        if (task.getException() instanceof FirebaseAuthWeakPasswordException)
-                            Toast.makeText(MainActivity.this, "PassWord Too Weak.\nTry Again!!", Toast.LENGTH_SHORT).show();
-                        else if (task.getException() instanceof FirebaseAuthUserCollisionException)
-                            Toast.makeText(MainActivity.this, "User Already Exists!! \nTry Again!!", Toast.LENGTH_SHORT).show();
-                        else if (task.getException() instanceof FirebaseNetworkException)
-                            Toast.makeText(MainActivity.this, "Internet Not Available!\nRetry... ", Toast.LENGTH_SHORT).show();
-                        else
-                            Toast.makeText(MainActivity.this, task.getException().toString(), Toast.LENGTH_SHORT).show();
+    private File createImageFile() throws IOException {
+        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        File image = File.createTempFile("temp",".jpg", storageDir);
 
-                    }
-                });
+        currentPhotoPath = image.getAbsolutePath();
+        return image;
+    }
+
+    private void setPic() {
+        // Get the dimensions of the View
+        int targetW = imageHolder.getWidth();
+        int targetH = imageHolder.getHeight();
+
+        // Get the dimensions of the bitmap
+        BitmapFactory.Options bmOptions = new BitmapFactory.Options();
+        bmOptions.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(currentPhotoPath, bmOptions);
+        int photoW = bmOptions.outWidth;
+        int photoH = bmOptions.outHeight;
+
+        // Determine how much to scale down the image
+        int scaleFactor = Math.min(photoW/targetW, photoH/targetH);
+
+        // Decode the image file into a Bitmap sized to fill the View
+        bmOptions.inJustDecodeBounds = false;
+        bmOptions.inSampleSize = scaleFactor;
+        bmOptions.inPurgeable = true;
+
+        Bitmap bitmap = BitmapFactory.decodeFile(currentPhotoPath, bmOptions);
+        imageHolder.setImageBitmap(bitmap);
 
     }
+
 }
